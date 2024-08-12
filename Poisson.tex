@@ -34,6 +34,9 @@ citecolor=green,urlcolor=red]{hyperref}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \renewcommand\thesubsection{\thesection\Alph{subsection}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\renewcommand\lstlistingname{Header}
+\renewcommand\lstlistlistingname{Header}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %opening
 \begin{document}
 \title{HiperLife Tutorial: Poisson Equation}
@@ -53,18 +56,18 @@ Poisson Equation is a simple elliptic model, given by
 We will use this equation in this example for introducing the implemention of finite
 element method in the HiperLife. Notice that here we have used $f = 0$.
 \subsubsection{Boundary Condition} \label{sec: B.C}
-As shown in Fig 1, We have used homogeneous Dirichlet ($U=0 ,\quad U=1$) along the lines ($x_{1}=0,\quad x_{1}=1$), and along the lines ($x_{2}=0.5,\quad x_{2}=1$) we applied Inhomogenous Dirichelet ($U=x_{1} ,\quad U=x_{1}^2$), respectively.
+As shown in Figure \ref{fig_SB}, We have used homogeneous Dirichlet ($U=0 ,\quad U=1$) along the lines ($x_{1}=0,\quad x_{1}=1$), and along the lines ($x_{2}=0.5,\quad x_{2}=1$) we applied Inhomogenous Dirichelet ($U=x_{1} ,\quad U=x_{1}^2$), respectively.
 
 \begin{figure}[htbp]
 	\centering
 	\input{Figures/geometry.tex}
-	\caption{Schematic of Geometry in $\Omega =[0,1]\times[0.5,1]$ and Boundary conditions on $\partial \Omega$.}
+	\caption{Illustration of the model in $\Omega =[0,1]\times[0.5,1]$ and Boundary conditions on $\partial \Omega$.}
 	\label{fig_SB}
 \end{figure}
 
 \section{Formulation} \label{sec: frml}
 \subsubsection{Weak Form} \label{sec: WF}
-To establish the weak form of Eq. \ref{eq1}, it is multiplied with a weight-function, $w(x, y)$ to obtain
+To establish the weak form of Eq. (\ref{eq1}), it is multiplied with a weight-function, $w(x, y)$ to obtain
 \begin{equation}\label{eq2}
 	\begin{aligned}[b]
 		-w\nabla^2 U = wf
@@ -89,7 +92,7 @@ Using Gauss’s theorem we get
 		\int_\Omega \nabla(w\nabla U) = \int_{\partial\Omega} w \nabla U \cdot n dS = 0
 	\end{aligned}
 \end{equation}
-Eq. \ref{eq4} now reduces to
+Eq. (\ref{eq4}) now reduces to
 \begin{equation}\label{eq6}
 	\begin{aligned}[b]
 		\int_\Omega w\nabla^2U = - \int_{\Omega} \nabla w \cdot \nabla U
@@ -140,7 +143,7 @@ where $\xi_{I}$ and $\eta_{I}$ are the corner coordinates at element $T$ in doma
 %
 In this example each node only have one degree of freedom and for the purpose of discretization we use $500 \times 500$ uniform mesh.
 \subsubsection{Elemental Integral} \label{sec: elem int}
-  We want to compute the integral at Eq. \ref{eq7} over the element $T$
+  We want to compute the integral at Eq. (\ref{eq7}) over the element $T$
 \begin{equation}\label{eq12}
 	\begin{aligned}[b]
 		\int_{\Omega_{T}} (\frac{\partial N}{\partial x_{1}}
@@ -189,7 +192,7 @@ by defining Jacobian as
 			\end{bmatrix}
 	\end{aligned}
 \end{equation}
-so we can rewrite the Eq. \ref{eq13}
+so we can rewrite the Eq. (\ref{eq13})
 
 \begin{equation}\label{eq16}
 	\begin{aligned}[b]
@@ -206,7 +209,7 @@ so we can rewrite the Eq. \ref{eq13}
 \end{bmatrix}
 	\end{aligned}
 \end{equation}
- by obtaining the terms Eq \ref{eq12} now we can calculate the integral. So the elements of tangent matrix $K$ could be defined as
+ by obtaining the terms Eq (\ref{eq12}) now we can calculate the integral. So the elements of tangent matrix $K$ could be defined as
 \begin{equation}\label{eq17}
 	\begin{aligned}[b]
 		K(i,j) = \int_{\Omega_{T}} (\frac{\partial N_{i}}{\partial x_{1}}
@@ -236,7 +239,7 @@ Let $f(\xi_{i},\eta_{i})=j(\frac{\partial N_{i}}{\partial x_{1}}
 		\int_{-1}^1 \int_{-1}^1 f(\xi_{i},\eta_{i}) d\xi d\eta = \sum_{k=1}^{n}\sum_{l=1}^{m} \omega_{k}\omega_{l}f(\hat{\xi_{i}},\hat{\eta_{i}})
 	\end{aligned}
 \end{equation}
-where $n$ and $m$ are the number of integration points used in each direction, $\omega$ is quadrature weights, $\hat{\xi_{i}}$ and $\hat{\eta_{i}}$ are the roots of the $n$th Legendre polynomial. In this example we use $2 \times 2$ integration as it shown in Fig. \ref{fig_int}. Which the value of  quadrature weights are the same $\omega_{p}=1$, and coordinate of guass points would be:  $(\xi_{p}, \eta_{p})=\{(-\frac{1}{\sqrt{3}},-\frac{1}{\sqrt{3}}),  (\frac{1}{\sqrt{3}}, -\frac{1}{\sqrt{3}}),  (-\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}}), (\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}})\}$
+where $n$ and $m$ are the number of integration points used in each direction, $\omega$ is quadrature weights, $\hat{\xi_{i}}$ and $\hat{\eta_{i}}$ are the roots of the $n$th Legendre polynomial. In this example we use $2 \times 2$ integration as it shown in Figure \ref{fig_int}. Which the value of  quadrature weights are the same $\omega_{p}=1$, and coordinate of guass points would be:  $(\xi_{p}, \eta_{p})=\{(-\frac{1}{\sqrt{3}},-\frac{1}{\sqrt{3}}),  (\frac{1}{\sqrt{3}}, -\frac{1}{\sqrt{3}}),  (-\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}}), (\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}})\}$
 \section{Implementation} \label{sec: imp}
 In this section, we present the implementation of solution in the Hiperlife.
 \subsubsection{Headers} \label{sec: hdr}
@@ -288,6 +291,7 @@ int main(int argc, char** argv)
 \end{lstlisting}
 
 \subsubsection{Mesh Generation} \label{sec: mshG}
+creating a model geometry, which is a rectangle an translate it in y-direction, and also introducing mesh. the header declaration of function can be find at Header \ref{lst:hlgeo}. 
 \begin{lstlisting}
 	SmartPtr<StructMeshGenerator> structMesh = Create<StructMeshGenerator>();
 	
@@ -320,8 +324,9 @@ int main(int argc, char** argv)
 \end{lstlisting}
 
 \subsubsection{Boundary conditions} \label{sec: BC}
+applying boundary condition, as it declared in Header \ref{lst:hlBC}.
 \begin{lstlisting}
-	dofHand->setBoundaryCondition(0, 0.0);
+	dofHand->setBoundaryCondition(0, 0.0); 
 	dofHand->setBoundaryCondition(0, MAxis::Xmax, 1.0);
 	dofHand->setBoundaryCondition(0, MAxis::Ymin, [](double x){return x;});
 	dofHand->setBoundaryCondition(0, MAxis::Ymax, [](double x){return x*x;});
@@ -409,4 +414,25 @@ void ElementFilling(hiperlife::FillStructure& fillStr)
 }
 \end{lstlisting}
 \section{Results} \label{sec: rst}
+aaa
+\section*{Appendix} \label{sec: apx}
+In this section we present the declaration of the used functions in headers or even their code for the purpose of clarification.
+
+For creating a rectangle and Translation in y-direction:
+\begin{lstlisting} [caption={geometry},captionpos=b,label={lst:hlgeo},language=C++]
+// Generate a rectangle with nEx*nEy elements for given side lengths sidex and sidey.
+void genRectangle(int nEx, int nEy, double sidex, double sidey);
+
+//Translate mesh in y direction by an increment (incrY)
+inline void translateY(double incrY){translate(0.0, incrY, 0.0);};
+\end{lstlisting}
+
+For boundary condition:
+\begin{lstlisting} [caption={B.C},captionpos=b,label={lst:hlBC},language=C++]
+// Set a constraint value at every axis for one dof
+void setBoundaryCondition(int dof, double value)
+
+// Set a constraint function at one axis for one dof in 2D
+void setBoundaryCondition(int dof, MAxis ax, std::function<double(double)> f)
+\end{lstlisting}
 \end{document}
