@@ -28,8 +28,17 @@ citecolor=green,urlcolor=red]{hyperref}
 \usepackage{listings}
 \lstset { %
 	language=C++,
-	backgroundcolor=\color{black!5}, % set backgroundcolor
-	basicstyle=\footnotesize,% basic font setting
+	backgroundcolor=\color{blue!5}, % set backgroundcolor
+	basicstyle=\footnotesize\color{black},% basic font settingbasicstyle=\ttfamily\color{black}
+	keywordstyle=\color{red},
+	commentstyle=\color{violet},
+	stringstyle=\color{blue},
+	xleftmargin=2em,
+	frame=single,
+	framexleftmargin=2em,
+	numbers=left,
+	numberstyle=\tiny,
+	numbersep=8pt,
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \renewcommand\thesubsection{\thesection\Alph{subsection}}
@@ -129,7 +138,7 @@ four nodes. The associated interpolation functions for geometry and ﬁeld
 variables are bilinear. Let $\phi_{I}=N_I $ at element $T$.
 \begin{equation}\label{eq11}
 	\begin{aligned}[b]
-		N_{I}(\xi, \eta) = \frac{1}{4}(1+\xi_I\xi)(1+\eta_I\eta)
+		N_{I}(\xi, \eta) = \frac{1}{4}(1+\xi_I\xi)(1+\eta_I\eta) \quad (I \ \text{from} \ 1 \ \text{to} \ 4)
 	\end{aligned}
 \end{equation}
 where $\xi_{I}$ and $\eta_{I}$ are the corner coordinates at element $T$ in domain of $\Omega_{T} \in (-1,1)^2$.
@@ -143,12 +152,12 @@ where $\xi_{I}$ and $\eta_{I}$ are the corner coordinates at element $T$ in doma
 %
 In this example each node only have one degree of freedom and for the purpose of discretization we use $500 \times 500$ uniform mesh.
 \subsubsection{Elemental Integral} \label{sec: elem int}
-  We want to compute the integral at Eq. (\ref{eq7}) over the element $T$
+  We want to compute the integral at Eq. (\ref{eq7}) over the element $T$. We assumed $U=N_I U_I$, and $w_J = N_J$, so $\nabla U= \frac{\partial N_I}{\partial x_i} U_I \otimes \mathbf{e}_i$, and  $\nabla w= \frac{\partial N_J}{\partial x_j}  \otimes \mathbf{e}_j$, so 
 \begin{equation}\label{eq12}
 	\begin{aligned}[b]
-		\int_{\Omega_{T}} (\frac{\partial N}{\partial x_{1}}
-		\frac{\partial N}{\partial x_{1}}+\frac{\partial N}{\partial x_{2}} 
-		\frac{\partial N}{\partial x_{2}})U dA = \int_{\Omega_{T}} Nf dA
+		\int_{\Omega_{T}} \frac{\partial N_I}{\partial x_i} \frac{\partial N_J}{\partial x_j} U_I \delta_{ij} \ dV = \int_{\Omega_{T}} \frac{\partial N_I}{\partial x_i} \frac{\partial N_J}{\partial x_i} U_I \ dV= \int_{\Omega_{T}} (\frac{\partial N_I}{\partial x_{1}}
+		\frac{\partial N_J}{\partial x_{1}} + \frac{\partial N_I}{\partial x_{2}} 
+		\frac{\partial N_J}{\partial x_{2}})U_I dA = \int_{\Omega_{T}} N_J f dA
 	\end{aligned}
 \end{equation}
 by the linear mapping between $(\xi,\eta)$ and $(x_{1},x_2)$, we can define $\frac{\partial N}{\partial x_{1}}$ and $\frac{\partial N}{\partial x_{2}}$
@@ -240,26 +249,36 @@ Let $f(\xi_{i},\eta_{i})=j(\frac{\partial N_{i}}{\partial x_{1}}
 	\end{aligned}
 \end{equation}
 where $n$ and $m$ are the number of integration points used in each direction, $\omega$ is quadrature weights, $\hat{\xi_{i}}$ and $\hat{\eta_{i}}$ are the roots of the $n$th Legendre polynomial. In this example we use $2 \times 2$ integration as it shown in Figure \ref{fig_int}. Which the value of  quadrature weights are the same $\omega_{p}=1$, and coordinate of guass points would be:  $(\xi_{p}, \eta_{p})=\{(-\frac{1}{\sqrt{3}},-\frac{1}{\sqrt{3}}),  (\frac{1}{\sqrt{3}}, -\frac{1}{\sqrt{3}}),  (-\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}}), (\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}})\}$
+
 \section{Implementation} \label{sec: imp}
 In this section, we present the implementation of solution in the Hiperlife.
+\nolinenumbers
 \subsubsection{Headers} \label{sec: hdr}
+
 \begin{lstlisting}
+// hiperlife(HL) headers
 #include "hl_Core.h"
 #include "hl_ParamStructure.h"
 #include "hl_Parser.h"
-#include "hl_TypeDefs.h"
-#include "hl_GlobalBasisFunctions.h"
-#include "hl_StructMeshGenerator.h"
-#include "hl_DistributedMesh.h"
-#include "hl_FillStructure.h"
-#include "hl_DOFsHandler.h"
-#include "hl_HiPerProblem.h"
+#include "hl_TypeDefs.h"             // HL header that defines different data
+                                     // types used throughout the library
+                                     
+#include "hl_GlobalBasisFunctions.h" // HL header that defines
+                                     // auxiliary geometric-related functions
+                                     
+#include "hl_StructMeshGenerator.h"  // HL header that defines structured mesh objects
+#include "hl_DistributedMesh.h"      // HL header that defines distributed mesh objects
+#include "hl_FillStructure.h"        // HL header that defines objects to fill  the matrix
+                                     // & vector of the problem
+                                     
+#include "hl_DOFsHandler.h"          // HL header that defines DOFHandler objects
+#include "hl_HiPerProblem.h"         // HL header that defines HiPerProblem objects
+
 #include "hl_LinearSolver_Iterative_AztecOO.h"
 #include "hl_LinearSolver_Direct_MUMPS.h"
 \end{lstlisting}
-	
 \subsubsection{Parameters} \label{sec: ppr}
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=21]
 struct PoissonParams
 {
 	enum RealParameters
@@ -274,25 +293,27 @@ struct PoissonParams
 \end{lstlisting}
 
 \subsubsection{Initializing} \label{sec: main}
-\begin{lstlisting}
+Function that fills the elemental linear system of the problem. It is declared here but implemented at the bottom.
+\begin{lstlisting}[firstnumber=32]
 void ElementFilling(hiperlife::FillStructure& fillStr);
-	
+\end{lstlisting}
+Main part
+\begin{lstlisting}[firstnumber=33]
 int main(int argc, char** argv)
 {
 	using namespace std;
 	using namespace hiperlife;
-			
 	hiperlife::Init(argc, argv);
 \end{lstlisting}
-
 \subsubsection{Defining parameters of the model} \label{sec: Pstr}
-\begin{lstlisting}
+
+\begin{lstlisting}[firstnumber=38]
 	SmartPtr<ParamStructure> paramStr = CreateParamStructure<PoissonParams>();
 \end{lstlisting}
 
 \subsubsection{Mesh Generation} \label{sec: mshG}
-creating a model geometry, which is a rectangle an translate it in y-direction, and also introducing mesh. the header declaration of function can be find at Header \ref{lst:hlgeo}. 
-\begin{lstlisting}
+creating a model geometry, which is a rectangle and translate it in y-direction, and also introducing mesh. the header declaration of function can be find at Header \ref{lst:hlgeo}. 
+\begin{lstlisting}[firstnumber=39]
 	SmartPtr<StructMeshGenerator> structMesh = Create<StructMeshGenerator>();
 	
 	structMesh->setNDim(3);
@@ -304,7 +325,7 @@ creating a model geometry, which is a rectangle an translate it in y-direction, 
 \end{lstlisting}
 
 \subsubsection{Mesh Distribution} \label{sec: mshD}
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=47]
 	SmartPtr<DistributedMesh> disMesh = Create<DistributedMesh>();
 	
 	disMesh->setMesh(structMesh);
@@ -314,7 +335,7 @@ creating a model geometry, which is a rectangle an translate it in y-direction, 
 \end{lstlisting}
 
 \subsubsection{DOFs Handler} \label{sec: dofC}
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=53]
 	SmartPtr<DOFsHandler> dofHand = Create<DOFsHandler>(disMesh);
 	
 	dofHand->setNameTag("dofHand");
@@ -325,7 +346,7 @@ creating a model geometry, which is a rectangle an translate it in y-direction, 
 
 \subsubsection{Boundary conditions} \label{sec: BC}
 applying boundary condition, as it declared in Header \ref{lst:hlBC}.
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=59]
 	dofHand->setBoundaryCondition(0, 0.0); 
 	dofHand->setBoundaryCondition(0, MAxis::Xmax, 1.0);
 	dofHand->setBoundaryCondition(0, MAxis::Ymin, [](double x){return x;});
@@ -335,7 +356,7 @@ applying boundary condition, as it declared in Header \ref{lst:hlBC}.
 \end{lstlisting}
 
 \subsubsection{HiperProblem} \label{sec: hpc}
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=65]
 	SmartPtr<HiPerProblem> hiperProbl = Create<HiPerProblem>();
 	
 	hiperProbl->setParameterStructure(paramStr);
@@ -348,7 +369,7 @@ applying boundary condition, as it declared in Header \ref{lst:hlBC}.
 \end{lstlisting}
 
 \subsubsection{Solver Settings} \label{sec: slv}
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=74]
 	SmartPtr<AztecOOIterativeLinearSolver> solver=Create<AztecOOIterativeLinearSolver>();
 	
 	solver->setHiPerProblem(hiperProbl);
@@ -365,7 +386,7 @@ applying boundary condition, as it declared in Header \ref{lst:hlBC}.
 \end{lstlisting}
 
 \subsubsection{Finalization and Postprocessing} \label{sec: fnl}
-\begin{lstlisting}
+\begin{lstlisting}[firstnumber=87]
 	dofHand->printFileLegacyVtk("Poisson");
 		
 	hiperlife::Finalize();
@@ -374,7 +395,7 @@ applying boundary condition, as it declared in Header \ref{lst:hlBC}.
 \end{lstlisting}
 
 \subsubsection{Element Filling function} \label{sec: elff}
-\begin{lstlisting}	
+\begin{lstlisting}[firstnumber=92]
 void ElementFilling(hiperlife::FillStructure& fillStr)
 {
 	using namespace std;
@@ -414,7 +435,13 @@ void ElementFilling(hiperlife::FillStructure& fillStr)
 }
 \end{lstlisting}
 \section{Results} \label{sec: rst}
-aaa
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{Figures/result.png}
+	\caption{Solution.}
+	\label{fig_rst}
+\end{figure}
+\pagebreak
 \section*{Appendix} \label{sec: apx}
 In this section we present the declaration of the used functions in headers or even their code for the purpose of clarification.
 
