@@ -16,6 +16,7 @@ citecolor=green,urlcolor=red]{hyperref}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{amsmath}
 \usepackage{cleveref}
+\usepackage{authblk}
 %\usepackage[fleqn]{amsmath}
 \usepackage{lineno}
 \usepackage{tikz}
@@ -49,129 +50,406 @@ citecolor=green,urlcolor=red]{hyperref}
 %opening
 \begin{document}
 \title{HiperLife Tutorial: Poisson Equation}
-\author{LaCàN}
+\author{Arash Imani\thanks{Disclaimer: The implemented code (as can be seen in its respective section) is a part of HiperLife primary tutorials, so it is programmed by others.}}
+\affil{LaCàN}
 \maketitle
 
 \linenumbers
-\section{Introduction} \label{sec: Int}
-\subsubsection{Problem Definition} \label{sec: pd} 
+\section{Problem Definition} \label{sec: pd}
+The Poisson equation extends from the simpler Laplace equation, which assumes no sources. When sources are present, the Poisson equation becomes useful in describing how fields, such as electric or gravitational potential fields, are influenced by these sources. The Poisson equation appears frequently in classical physics and underlies much of the theoretical framework for modeling potential fields such as Electrostatics, Gravitational Potential, Heat Conduction and Fluid Mechanics.The Poisson equation's versatility comes from its ability to connect a spatially varying source (charge, mass, heat, etc.) with a field (potential, temperature, pressure, etc.) that responds to that source. Solving the Poisson equation in any given physical context allows scientists and engineers to predict how a system will respond to internal sources, like an electric charge distribution or a temperature source, and adjust designs accordingly.
+\begin{figure}[htbp]
+	\centering
+	\input{Figures/geometry.tex}
+	\caption{Geometry, BC and computational domain used for the analysis of Poisson problem.}
+	\label{fig_SB}
+\end{figure}
+
+In practical applications, boundary conditions are often applied to solve the Poisson equation in specific regions, which is essential for real-world systems that are typically bounded by physical surfaces. The equation is solved using methods such as separation of variables, Green's functions, or numerical techniques like finite difference or finite element methods, especially in complex geometries.
+\section{Governing Equations} \label{sec: ge}
 Poisson Equation is a simple elliptic model, given by
 \begin{equation}\label{eq1}
 	\begin{aligned}
-		 -\Delta U = -\nabla^2 U = -\frac{\partial^2 U}{\partial x_{1}^2} - 
+		-\Delta U = -\nabla^2 U = -\frac{\partial^2 U}{\partial x_{1}^2} - 
 		\frac{\partial^2 U}{\partial x_{2}^2}=f
 	\end{aligned}
 \end{equation}
 We will use this equation in this example for introducing the implemention of finite
-element method in the HiperLife. Notice that here we have used $f = 0$.
-\subsubsection{Boundary Condition} \label{sec: B.C}
-As shown in Figure \ref{fig_SB}, We have used homogeneous Dirichlet ($U=0 ,\quad U=1$) along the lines ($x_{1}=0,\quad x_{1}=1$), and along the lines ($x_{2}=0.5,\quad x_{2}=1$) we applied Inhomogenous Dirichelet ($U=x_{1} ,\quad U=x_{1}^2$), respectively.
-
-\begin{figure}[htbp]
-	\centering
-	\input{Figures/geometry.tex}
-	\caption{Illustration of the model in $\Omega =[0,1]\times[0.5,1]$ and Boundary conditions on $\partial \Omega$.}
-	\label{fig_SB}
-\end{figure}
-
-\section{Formulation} \label{sec: frml}
-\subsubsection{Weak Form} \label{sec: WF}
-To establish the weak form of Eq. (\ref{eq1}), it is multiplied with a weight-function, $w(x, y)$ to obtain
+element method in the HiperLife. Notice that here we have used $f = 0$. As shown in Figure \ref{fig_SB}, We have used homogeneous Dirichlet ($U=0 ,\quad U=1$) along the lines ($x_{1}=0,\quad x_{1}=1$), and along the lines ($x_{2}=0.5,\quad x_{2}=1$) we applied Inhomogenous Dirichelet ($U=x_{1} ,\quad U=x_{1}^2$), respectively.
+\section{Weak Form} \label{sec: wf}
+The starting point for the development of the finite element model of Eq. (\ref{eq1}) is its weak form.
+The variational formulation of our model problem reads: Find $u \in V$ such that
 \begin{equation}\label{eq2}
-	\begin{aligned}[b]
-		-w\nabla^2 U = wf
+	\begin{aligned}
+		\mathcal{F}(u;v) = 0 \quad \forall v \in \hat{V}
 	\end{aligned}
 \end{equation}
-By integrating this expression over $\Omega$, we have
-
+where
 \begin{equation}\label{eq3}
-	\begin{aligned}[b]
-		-\int_\Omega w\nabla^2 U = \int_\Omega wf
+	\begin{aligned}
+		\mathcal{F}(u; v) =-\int_\Omega v \nabla \cdot \nabla u - v f \mathrm{d}\Omega\thinspace .
 	\end{aligned}
 \end{equation}
-We know from calculus that $\nabla(w\nabla U) = \nabla w \cdot \nabla U + w\nabla ^2 U$. So we can write
+and
 \begin{equation}\label{eq4}
+	\begin{aligned}
+		\hat{V} &= \{v \in H^1(\Omega) : v = 0 \text{ on } \partial \Omega\}, \\
+		V &= \{v \in H^1(\Omega) : v = 0 \text{ on } x_1=0, \ v = 1\text{ on }x_1=1, \ v= x_1 \text{ on } x_2=0.5, \ v= x_1^2 \text{ on } x_2=1\}\thinspace.
+	\end{aligned}
+\end{equation}
+where $v$ is a test function, which will be equated, in the our FE model to the interpolation function used for $u$.The discrete problem arises as usual by restricting $V$ and $\hat{V}$ to a pair of discrete spaces. using integrating by part this expression over $\Omega$, we have
+\begin{equation}\label{eq5}
 	\begin{aligned}[b]
-		-\int_\Omega w\nabla^2U = \int_{\Omega} \nabla(w\nabla U) - \int_{\Omega} \nabla w \cdot \nabla U = \int_\Omega wf dA
+		\mathcal{F}(u; v)=-\int_\Omega \nabla \cdot [v \nabla u] \ \mathrm{d} \Omega + \int_\Omega  \nabla v \nabla u \ \mathrm{d} \Omega - \int_\Omega vf \ \mathrm{d} \Omega\thinspace .
 	\end{aligned}
 \end{equation}
 Using Gauss’s theorem we get
-\begin{equation}\label{eq5}
-	\begin{aligned}[b]
-		\int_\Omega \nabla(w\nabla U) = \int_{\partial\Omega} w \nabla U \cdot n dS = 0
-	\end{aligned}
-\end{equation}
-Eq. (\ref{eq4}) now reduces to
 \begin{equation}\label{eq6}
 	\begin{aligned}[b]
-		\int_\Omega w\nabla^2U = - \int_{\Omega} \nabla w \cdot \nabla U
+		\mathcal{F}(u; v)=-\int_\Gamma [v \nabla u] \cdot \mathbf{n} \ \mathrm{d} \Gamma + \int_\Omega  \nabla v \nabla u \ \mathrm{d} \Omega - \int_\Omega vf \ \mathrm{d} \Omega\thinspace.
 	\end{aligned}
 \end{equation}
-so we get 
+By applying boundary condition since we do not have any flux, the final relation of weak form would be as
 \begin{equation}\label{eq7}
 	\begin{aligned}[b]
-		\int_{\Omega} \nabla w \cdot \nabla U dA = \int_\Omega wf dA
+		\mathcal{F}(u; v)=\int_\Omega  \nabla v \nabla u \ \mathrm{d} \Omega - \int_\Omega vf \ \mathrm{d} \Omega\thinspace.
 	\end{aligned}
 \end{equation}
-\subsubsection{Basis Function} \label{sec: Basis Func}
-We need to define basis functions for our 2D-domain and by it we can give an approximation of U.
+\section{Finite Element Model} \label{sec: fem}
+For Ritz-Galerkin FE model, the choice of the test functions is restricted to the spaces of approximation functions used for the solution field. Suppose that the variable $u$ approximated by expansions of the form
 \begin{equation}\label{eq8}
-	\begin{aligned}[b]
-		U(x,y) =\sum_{i=1}^{n} u_{i}\phi_{i}(x_{1},x_{2})
+	\begin{aligned}
+		u(\mathbf{x})= \sum_{j=1}^{M} \phi_j(\mathrm{x}) u_j = \boldsymbol{\Phi}^T\mathbf{u} \thinspace.
 	\end{aligned}
 \end{equation}
-by applying Gelerkin method the weight function is the same as basis function.
+By substituting Eq. (\ref{eq8}) in Eq. (\ref{eq7}) we get
 \begin{equation}\label{eq9}
 	\begin{aligned}[b]
-		w_{i} =\phi_{i}
+		\mathcal{F}(u; \phi)=\int_\Omega  \nabla \phi_i \nabla \phi_j u_j\ \mathrm{d} \Omega - \int_\Omega \phi_i f_i \ \mathrm{d} \Omega\thinspace.
 	\end{aligned}
 \end{equation}
-in isoparametric concept even geometry is interpolated by same function. so
+The above equations can be written symbolically in matrix form as
 \begin{equation}\label{eq10}
-	\begin{aligned}[b]
-		X(x_{1},x_{2}) =\sum_{i=1}^{n} x_{i}\phi_{i}(x_{1},x_{2})
+	\begin{aligned}
+		\mathbf{K}\mathbf{u} = \mathbf{F}\thinspace.
 	\end{aligned}
 \end{equation}
-\subsubsection{Element} \label{sec: elem}
-Quadrilateral Elements is the simplest quadrilateral element consists of
-four nodes. The associated interpolation functions for geometry and ﬁeld
-variables are bilinear. Let $\phi_{I}=N_I $ at element $T$.
+The coefficient matrices $\mathbf{K}$ and $\mathbf{F}$ shown in Eq. (\ref{eq15}) are defined as
 \begin{equation}\label{eq11}
 	\begin{aligned}[b]
-		N_{I}(\xi, \eta) = \frac{1}{4}(1+\xi_I\xi)(1+\eta_I\eta) \quad (I \ \text{from} \ 1 \ \text{to} \ 4)
+		K(i,j) &= \int_{\Omega_{T}} (\frac{\partial \phi_{i}}{\partial x_{1}}
+		\frac{\partial \phi_{j}}{\partial x_{1}}+\frac{\partial \phi_{i}}{\partial x_{2}} 
+		\frac{\partial \phi_{j}}{\partial x_{2}}) dA\\
+		F(i) &= \int_{\Omega_{T}} \phi_{i}f_i \mathrm{d}A
 	\end{aligned}
 \end{equation}
-where $\xi_{I}$ and $\eta_{I}$ are the corner coordinates at element $T$ in domain of $\Omega_{T} \in (-1,1)^2$.
-
-\begin{figure}[htbp]
-	\centering
-	\input{Figures/element.tex}
-	\caption{Schematic of an Element.}
-	\label{fig_el}
-\end{figure}
-%
-In this example each node only have one degree of freedom and for the purpose of discretization we use $500 \times 500$ uniform mesh.
-\subsubsection{Elemental Integral} \label{sec: elem int}
-  We want to compute the integral at Eq. (\ref{eq7}) over the element $T$. We assumed $U=N_I U_I$, and $w = N$, so $\nabla U= \frac{\partial N_I}{\partial x_i} U_I \otimes \mathbf{e}_i$, and  $\nabla w= \frac{\partial N_J}{\partial x_j}  \otimes \mathbf{e}_j$, so 
+keep in mind that in our case $f=0$, too. Note that $\mathrm{d}A=\mathrm{d}x_{1} \times \mathrm{d}x_{2}=jac\mathrm{d}\xi \mathrm{d}\eta$, which $jac=\mathrm{det}(Jacobian)$\footnote{for more details see the Appendix}. The elemental representation of the vector and matrix required for implementation in the Hiperlife would have the format of 
 \begin{equation}\label{eq12}
 	\begin{aligned}[b]
-		\int_{\Omega_{T}} \frac{\partial N_I}{\partial x_i} \frac{\partial N_J}{\partial x_j} U_I \delta_{ij} \ dV = \int_{\Omega_{T}} \frac{\partial N_I}{\partial x_i} \frac{\partial N_J}{\partial x_i} U_I \ dV= \int_{\Omega_{T}} (\frac{\partial N_I}{\partial x_{1}}
-		\frac{\partial N_J}{\partial x_{1}} + \frac{\partial N_I}{\partial x_{2}} 
-		\frac{\partial N_J}{\partial x_{2}})U_I dA = \int_{\Omega_{T}} N_J f dA
+		Ak(i,j) &= jac \times \left[\frac{\partial \phi_{i}}{\partial x_{1}}
+		\frac{\partial \phi_{j}}{\partial x_{1}}+\frac{\partial \phi_{i}}{\partial x_{2}} \frac{\partial \phi_{j}}{\partial x_{2}}\right], \\
+		Bk(i) &= jac \times [\phi_{i}f]\thinspace .
 	\end{aligned}
 \end{equation}
-by the linear mapping between $(\xi,\eta)$ and $(x_{1},x_2)$, we can define $\frac{\partial N}{\partial x_{1}}$ and $\frac{\partial N}{\partial x_{2}}$
+\section{Choice of Elements} \label{sec: coe}
+Thus, for this simple problem every Lagrange and serendipity family of interpolation functions are admissible for the interpolation of the temperature field, our choice is would be linear quadrilateral element.Linear  Quadrilateral Elements is the simplest quadrilateral element consists of four nodes. The associated interpolation functions for geometry and ﬁeld variables are bilinear.
 \begin{equation}\label{eq13}
 	\begin{aligned}[b]
-&
-		\frac{\partial N}{\partial \xi} = \frac{\partial N}{\partial x_{1}}\frac{\partial x_{1}}{\partial \xi}+\frac{\partial N}{\partial x_{2}}\frac{\partial x_{2}}{\partial \eta}\\
-& 
-		\frac{\partial N}{\partial \eta} = \frac{\partial N}{\partial x_{1}}\frac{\partial x_{1}}{\partial \xi}+\frac{\partial N}{\partial x_{2}}\frac{\partial x_{2}}{\partial \eta}
+		\boldsymbol{\Phi}_{I}(\xi, \eta) = \frac{1}{4}(1+\xi_I\xi)(1+\eta_I\eta) \quad (I \ \text{from} \ 1 \ \text{to} \ 4)
+	\end{aligned}
+\end{equation}
+
+where $\xi_{I}$ and $\eta_{I}$ are the corner coordinates at element $T$ in domain of $\Omega_{T} \in (-1,1)^2$. As it shown in Figure \ref{fig_elm} we are using $2 \times 2$ Gauss–Legendre quadrature integration.
+\begin{figure}[htbp]
+	\centering
+	\input{Figures/element2.tex}
+	\caption{Linear quadrilateral element used for finite element model.}
+	\label{fig_elm}
+\end{figure}
+
+In this example each node only have one degree of freedom and for the purpose of discretization we use $500 \times 500$ uniform mesh.
+\begin{figure}[htbp]
+	\centering
+	\input{Figures/flowchart.tex}
+	\caption{Flow chart.}
+	\label{fig_flw}
+\end{figure}
+\section{Implementation} \label{sec: imp}
+In this section, we present the implementation of our solution in the Hiperlife. The program is divided into three separate files, main part which we create our problem by the Hiperlife headers, auxiliary header where we introduce parameters and declare defined functions, and at last auxiliary file, where we define some functions which provide required matrices like the tangent matrix. As it is already mentioned this code is from the Hiperlife primary tutorials and for any use the Copyright policy and License should be check from the project homepage\footnote{ https://hiperlife.gitlab.io/hiperlife}. The Flowchart of a typical HiperLife program is shown in Figure \ref{fig_flw}.
+ 
+\subsubsection{Poisson.cpp} \label{sec: m.cpp}
+\nolinenumbers
+\begin{lstlisting}
+/*
+*******************************************************************************
+Copyright (c) 2017-2023 Team hiperlife
+Authors: Daniel Santos-OlivAn, Alejandro Torres-SAnchez and Guillermo Vilanova
+Contributors:
+*******************************************************************************
+This file is part of hiperlife
+Project homepage: https://hiperlife.gitlab.io/hiperlife
+Distributed under the GNU General Public License, see the accompanying
+file LICENSE or https://opensource.org/license/gpl-3-0.
+*******************************************************************************
+*/
+
+
+
+// hiperlife headers
+#include "hl_Core.h"
+#include "hl_ParamStructure.h"
+#include "hl_Parser.h"
+#include "hl_TypeDefs.h"
+#include "hl_GlobalBasisFunctions.h" 
+#include "hl_StructMeshGenerator.h"
+#include "hl_MeshLoader.h"
+#include "hl_DistributedMesh.h"
+#include "hl_FillStructure.h"
+#include "hl_DOFsHandler.h"
+#include "hl_HiPerProblem.h"
+#include "hl_LinearSolver_Iterative_AztecOO.h"
+#include "hl_LinearSolver_Direct_MUMPS.h"
+
+//using another header file for filling the elemental linear  
+#include "AuxPoisson.h"
+
+int main(int argc, char** argv)
+{
+	using namespace std;
+	using namespace hiperlife;
+		
+	// **************************************************************//
+	// *****                 INITIALIZATION                     *****//
+	// **************************************************************//
+	hiperlife::Init(argc, argv);
+	SmartPtr<ParamStructure> paramStr = CreateParamStructure<PoissonParams>();
+	// **************************************************************//
+	// *****                   MESH CREATION                    *****//
+	// **************************************************************//
+	//====================== Mesh generation ======================//
+	
+	SmartPtr<StructMeshGenerator> structMesh = Create<StructMeshGenerator>();
+	structMesh->setNDim(3);
+	structMesh->setBasisFuncType(BasisFuncType::Lagrangian);
+	structMesh->setBasisFuncOrder(1);
+	structMesh->setElemType(ElemType::Square);
+	structMesh->genRectangle(500, 500, 1.0, 0.5);
+	structMesh->translateY(0.5);
+	//===========             Distribute mesh            ===========//
+	SmartPtr<DistributedMesh> disMesh = Create<DistributedMesh>();
+	disMesh->setMesh(structMesh);
+	disMesh->setBalanceMesh(true);
+	disMesh->Update();
+	
+	// **************************************************************//
+	// *****               DOFsHANDLER CREATION                 *****//
+	// **************************************************************//
+	
+	//===========           Create DOFHandler            ===========//
+	SmartPtr<DOFsHandler> dofHand = Create<DOFsHandler>(disMesh);
+	dofHand->setNameTag("dofHand");
+	dofHand->setNumDOFs(1);
+	dofHand->Update();
+	//===========          Boundary conditions          ===========//
+	dofHand->setBoundaryCondition(0, 0.0);
+	dofHand->setBoundaryCondition(0, MAxis::Xmax, 1.0);
+	dofHand->setBoundaryCondition(0, MAxis::Ymin, [](double x){return x;});
+	dofHand->setBoundaryCondition(0, MAxis::Ymax, [](double x){return x*x;});
+	dofHand->UpdateGhosts();
+	
+	
+	// **************************************************************//
+	// *****               HIPERPROBLEM CREATION                *****//
+	// **************************************************************//
+	SmartPtr<HiPerProblem> hiperProbl = Create<HiPerProblem>();
+	hiperProbl->setParameterStructure(paramStr);
+	hiperProbl->setDOFsHandlers({dofHand});
+	
+	//===========            Set integration             ===========//
+	hiperProbl->setIntegration("Integ", {"dofHand"});
+	hiperProbl->setCubatureGauss("Integ", 3);
+	hiperProbl->setElementFillings("Integ", ElementFilling);
+	
+	//===========                 Update                ===========//
+	hiperProbl->Update();
+	
+	//===========               Set solver               ===========//
+	
+	SmartPtr<MUMPSDirectLinearSolver> solver = Create<MUMPSDirectLinearSolver>();
+	solver->setHiPerProblem(hiperProbl);
+	solver->setVerbosity(MUMPSDirectLinearSolver::Verbosity::Extreme);
+	solver->setDefaultParameters();
+	solver->Update();
+	
+	solver->solve();
+	hiperProbl->UpdateSolution();
+	
+	// The results
+	dofHand->printFileLegacyVtk("Poisson");
+	// for visualization purposes.
+	ofstream rhsFile;
+	rhsFile.open(paramStr->getStringParameter(PoissonParams::filemesh)
+	+to_string(dofHand->myRank())+".txt");
+	hiperProbl->sol->Print(rhsFile);
+	rhsFile.close();
+	
+	
+	// **************************************************************//
+	// *****                    FINALIZE                        *****//
+	// **************************************************************//
+	
+	hiperlife::Finalize();
+	return 0;
+}
+
+\end{lstlisting}
+\subsubsection{AuxPoisson.h} \label{sec: a.h}
+\begin{lstlisting}
+/*
+*******************************************************************************
+Copyright (c) 2017-2023 Team hiperlife
+Authors: Daniel Santos-Olivan, Alejandro Torres-Sanchez and Guillermo Vilanova
+Contributors:
+*******************************************************************************
+This file is part of hiperlife
+Project homepage: https://hiperlife.gitlab.io/hiperlife
+Distributed under the GNU General Public License, see the accompanying
+file LICENSE or https://opensource.org/license/gpl-3-0.
+*******************************************************************************
+*/
+
+
+#ifndef AUXPoisson_H
+#define AUXPoisson_H
+
+// C headers
+#include <iostream>
+
+// hiperlife headers
+#include "hl_ParamStructure.h"
+#include "hl_FillStructure.h"
+#include "hl_DOFsHandler.h"
+#include "hl_HiPerProblem.h"
+
+struct PoissonParams
+{
+	enum RealParameters
+	{
+		force
+	};
+	enum StringParameters
+	{
+		filemesh
+	};
+	HL_PARAMETER_LIST DefaultValues
+	{
+		{"force", 0.0},
+		{"filemesh", ""},
+	};
+};
+
+
+void ElementFilling(hiperlife::FillStructure& fillStr);
+
+#endif
+\end{lstlisting}
+\subsubsection{AuxPoisson.cpp} \label{sec: a.cpp}
+\begin{lstlisting}
+// hiperlife headers
+#include "hl_Core.h"
+#include "hl_ParamStructure.h"
+#include "hl_Parser.h"
+#include "hl_TypeDefs.h"
+#include "hl_GlobalBasisFunctions.h"
+#include "hl_StructMeshGenerator.h"
+#include "hl_DistributedMesh.h"
+#include "hl_FillStructure.h"
+#include "hl_DOFsHandler.h"
+#include "hl_HiPerProblem.h"
+#include "hl_LinearSolver_Iterative_AztecOO.h"
+#include "hl_LinearSolver_Direct_MUMPS.h"
+#include "AuxPoisson.h"
+
+void ElementFilling(hiperlife::FillStructure& fillStr)
+{
+	using namespace std;
+	using namespace hiperlife;
+	using namespace hiperlife::Tensor;
+	
+	//===========          Initialize variables           ==========//
+	SubFillStructure& subFill = fillStr["dofHand"];
+	//   which we use to declare the variables:
+	int eNN  = subFill.eNN;       // Number of neighbor nodes
+	int pDim = subFill.pDim;      // Number of parametric dimension
+	wrapper<double,1>  bf(subFill.nborBFs(), eNN);;
+	tensor<double,2> Dbf_g(eNN,pDim);    //[dN_i/dx_1 dN_i/dx_2]
+	double jac; //Jacobian (differential of line/area/volume)
+	GlobalBasisFunctions::gradients(Dbf_g, jac, subFill);
+	
+	
+	// We are going to fill the matrix and the right hand side. Here, we define
+	//   the matrix Ak (eNN*eNN) and the vector Bk (eNN).
+	wrapper<double,2> Ak(fillStr.Ak(0, 0).data(),eNN,eNN);
+	wrapper<double,1> Bk(fillStr.Bk(0).data(),eNN);
+	
+	//=====================  Fill linear system =====================//
+	//
+	// We loop through the neighboring nodes to fill both the matrix
+	//    and the right-hand side at the same time
+	
+	// Fill matrix
+	//Ak = jac * Dbf_g * Dbf_g.T();
+	// Fill RH
+	//Bk = jac * bf * force;
+	
+	//using ttl::index::i, ttl::index::j, ttl::index::a;
+	// Fill matrix
+	//Ak = (jac * Dbf_g(i,a) * Dbf_g(j,a))(i,j);
+	// Fill RH
+	//Bk = (jac * bf(i) * force)(i);
+	
+	for (int i = 0; i < eNN; i++)
+	{
+		for (int j = 0; j < eNN; j++)
+		{
+			// Compute the product of the gradient of the basis functions
+			double dotij{};
+			for (int d = 0; d < pDim; d++)
+			dotij += Dbf_g(i,d)*Dbf_g(j,d);
+			
+			// Fill matrix
+			Ak(i,j) += jac * dotij;
+		}
+		
+		// Fill RHS
+		Bk(i) += jac * bf(i) * force;
+	}
+	
+}
+\end{lstlisting}
+\section{Results} \label{sec: rst}
+In this section, we present the results of our solution. The contour demonstration of result $u$ is also shown in Figure \ref{fig_rst}.
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{Figures/result.png}
+	\caption{Solution.}
+	\label{fig_rst}
+\end{figure}
+
+\pagebreak
+\section*{Appendix} \label{sec: apx}
+In this section we present the derivation behind hiperlife function that calculates the gradients of basis functions and Jacobian.
+by the linear mapping between $(\xi,\eta)$ and $(x_{1},x_2)$, we can define $\frac{\partial \phi}{\partial x_{1}}$ and $\frac{\partial \phi}{\partial x_{2}}$
+\begin{equation}\label{eq14}
+	\begin{aligned}[b]
+		&
+		\frac{\partial \phi}{\partial \xi} = \frac{\partial \phi}{\partial x_{1}}\frac{\partial x_{1}}{\partial \xi}+\frac{\partial \phi}{\partial x_{2}}\frac{\partial x_{2}}{\partial \eta}\\
+		& 
+		\frac{\partial \phi}{\partial \eta} = \frac{\partial \phi}{\partial x_{1}}\frac{\partial x_{1}}{\partial \xi}+\frac{\partial \phi}{\partial x_{2}}\frac{\partial x_{2}}{\partial \eta}
 	\end{aligned}
 \end{equation}
 Since $x=x(\xi,\eta)$, we get
 
-\begin{equation}\label{eq14}
+\begin{equation}\label{eq15}
 	\begin{aligned}[b]
 		\begin{bmatrix}
 			dx_{1}\\
@@ -192,283 +470,41 @@ Since $x=x(\xi,\eta)$, we get
 \end{equation}
 %
 by defining Jacobian as
-\begin{equation}\label{eq15}
+\begin{equation}\label{eq16}
 	\begin{aligned}[b]
 		J = \begin{bmatrix}
 			\frac{\partial x_{1}}{\partial \xi}       & \frac{\partial x_{2}}{\partial \xi} \\
 			\\
 			\frac{\partial x_{1}}{\partial \eta}       &\frac{\partial x_{2}}{\partial \eta}\\
-			\end{bmatrix}
+		\end{bmatrix}
 	\end{aligned}
 \end{equation}
-so we can rewrite the Eq. (\ref{eq13})
+so we can rewrite the Eq. (\ref{eq14}) as
 
-\begin{equation}\label{eq16}
-	\begin{aligned}[b]
-\begin{bmatrix}
-	\frac{\partial N}{\partial x_{1}}\\
-	\\
-	\frac{\partial N}{\partial x_{2}}  
-\end{bmatrix}
-= J^{-1}
-\begin{bmatrix}
-	\frac{\partial N}{\partial \xi}\\
-	\\
-	\frac{\partial N}{\partial \eta}
-\end{bmatrix}
-	\end{aligned}
-\end{equation}
- by obtaining the terms Eq (\ref{eq12}) now we can calculate the integral. So the elements of tangent matrix $K$ could be defined as
 \begin{equation}\label{eq17}
 	\begin{aligned}[b]
-		K(i,j) = \int_{\Omega_{T}} (\frac{\partial N_{i}}{\partial x_{1}}
-		\frac{\partial N_{j}}{\partial x_{1}}+\frac{\partial N_{i}}{\partial x_{2}} 
-		\frac{\partial N_{j}}{\partial x_{2}}) dA
+		\begin{bmatrix}
+			\frac{\partial \phi}{\partial x_{1}}\\
+			\\
+			\frac{\partial \phi}{\partial x_{2}}  
+		\end{bmatrix}
+		= J^{-1}
+		\begin{bmatrix}
+			\frac{\partial \phi}{\partial \xi}\\
+			\\
+			\frac{\partial \phi}{\partial \eta}
+		\end{bmatrix}
 	\end{aligned}
 \end{equation}
-and for external source 
+where $J^{-1}$ is
 \begin{equation}\label{eq18}
 	\begin{aligned}[b]
-		F(i) = \int_{\Omega_{T}} N_{i}f dA
+		J^{-1} = \frac{1}{\mathrm{det}J}\begin{bmatrix}
+			 \frac{\partial x_{2}}{\partial \eta}    & -\frac{\partial x_{2}}{\partial \xi} \\
+			\\
+			-\frac{\partial x_{1}}{\partial \eta}      &\frac{\partial x_{1}}{\partial \xi}\\
+		\end{bmatrix}
 	\end{aligned}
 \end{equation}
-keep in mind that in our case $f=0$. Note that $dA=dx_{1} \times dx_{2}=jd\xi d\eta$, which $j=det(J)$.
-\begin{figure}[htbp]
-	\centering
-	\input{Figures/integration.tex}
-	\caption{2D integration on Quadrilateral Element.}
-	\label{fig_int}
-\end{figure} 
-\subsubsection{Integration method} \label{sec: int}
-Let $f(\xi_{i},\eta_{i})=j(\frac{\partial N_{i}}{\partial x_{1}}
-\frac{\partial N_{j}}{\partial x_{1}}+\frac{\partial N_{i}}{\partial x_{2}} 
-\frac{\partial N_{j}}{\partial x_{2}})$, then by Gauss–Legendre quadrature we have
-\begin{equation}\label{eq19}
-	\begin{aligned}[b]
-		\int_{-1}^1 \int_{-1}^1 f(\xi_{i},\eta_{i}) d\xi d\eta = \sum_{k=1}^{n}\sum_{l=1}^{m} \omega_{k}\omega_{l}f(\hat{\xi_{i}},\hat{\eta_{i}})
-	\end{aligned}
-\end{equation}
-where $n$ and $m$ are the number of integration points used in each direction, $\omega$ is quadrature weights, $\hat{\xi_{i}}$ and $\hat{\eta_{i}}$ are the roots of the $n$th Legendre polynomial. In this example we use $2 \times 2$ integration as it shown in Figure \ref{fig_int}. Which the value of  quadrature weights are the same $\omega_{p}=1$, and coordinate of guass points would be:  $(\xi_{p}, \eta_{p})=\{(-\frac{1}{\sqrt{3}},-\frac{1}{\sqrt{3}}),  (\frac{1}{\sqrt{3}}, -\frac{1}{\sqrt{3}}),  (-\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}}), (\frac{1}{\sqrt{3}}, \frac{1}{\sqrt{3}})\}$
-
-\section{Implementation} \label{sec: imp}
-In this section, we present the implementation of solution in the Hiperlife.
-\nolinenumbers
-\subsubsection{Flow chart} \label{sec: flw}
-The Flowchart of a typical HiperLife program is shown in Figure \ref{fig_flw}.
-\begin{figure}[htbp]
-	\centering
-	\input{Figures/flowchart.tex}
-	\caption{Flow chart.}
-	\label{fig_flw}
-\end{figure} 
-
-\subsubsection{Headers} \label{sec: hdr}
-
-\begin{lstlisting}
-// hiperlife(HL) headers
-#include "hl_Core.h"
-#include "hl_ParamStructure.h"
-#include "hl_Parser.h"
-#include "hl_TypeDefs.h"             // HL header that defines different data
-                                     // types used throughout the library
-                                     
-#include "hl_GlobalBasisFunctions.h" // HL header that defines
-                                     // auxiliary geometric-related functions
-                                     
-#include "hl_StructMeshGenerator.h"  // HL header that defines structured mesh objects
-#include "hl_DistributedMesh.h"      // HL header that defines distributed mesh objects
-#include "hl_FillStructure.h"        // HL header that defines objects to fill  the matrix
-                                     // & vector of the problem
-                                     
-#include "hl_DOFsHandler.h"          // HL header that defines DOFHandler objects
-#include "hl_HiPerProblem.h"         // HL header that defines HiPerProblem objects
-
-#include "hl_LinearSolver_Iterative_AztecOO.h"
-#include "hl_LinearSolver_Direct_MUMPS.h"
-\end{lstlisting}
-\subsubsection{Parameters} \label{sec: ppr}
-\begin{lstlisting}[firstnumber=21]
-struct PoissonParams
-{
-	enum RealParameters
-	{
-		force
-	};	
-	HL_PARAMETER_LIST DefaultValues
-	{
-		{"force", 0.0},
-	};
-};
-\end{lstlisting}
-
-\subsubsection{Initializing} \label{sec: main}
-Function that fills the elemental linear system of the problem. It is declared here but implemented at the bottom.
-\begin{lstlisting}[firstnumber=32]
-void ElementFilling(hiperlife::FillStructure& fillStr);
-\end{lstlisting}
-Main part
-\begin{lstlisting}[firstnumber=33]
-int main(int argc, char** argv)
-{
-	using namespace std;
-	using namespace hiperlife;
-	hiperlife::Init(argc, argv);
-\end{lstlisting}
-\subsubsection{Defining parameters of the model} \label{sec: Pstr}
-
-\begin{lstlisting}[firstnumber=38]
-	SmartPtr<ParamStructure> paramStr = CreateParamStructure<PoissonParams>();
-\end{lstlisting}
-
-\subsubsection{Mesh Generation} \label{sec: mshG}
-creating a model geometry, which is a rectangle and translate it in y-direction, and also introducing mesh. the header declaration of function can be find at Header \ref{lst:hlgeo}. 
-\begin{lstlisting}[firstnumber=39]
-	SmartPtr<StructMeshGenerator> structMesh = Create<StructMeshGenerator>();
-	
-	structMesh->setNDim(3);
-	structMesh->setBasisFuncType(BasisFuncType::Lagrangian);
-	structMesh->setBasisFuncOrder(1);
-	structMesh->setElemType(ElemType::Square);
-	structMesh->genRectangle(500, 500, 1.0, 0.5);
-	structMesh->translateY(0.5);
-\end{lstlisting}
-
-\subsubsection{Mesh Distribution} \label{sec: mshD}
-\begin{lstlisting}[firstnumber=47]
-	SmartPtr<DistributedMesh> disMesh = Create<DistributedMesh>();
-	
-	disMesh->setMesh(structMesh);
-	disMesh->setBalanceMesh(true);
-	
-	disMesh->Update();
-\end{lstlisting}
-
-\subsubsection{DOFs Handler} \label{sec: dofC}
-\begin{lstlisting}[firstnumber=53]
-	SmartPtr<DOFsHandler> dofHand = Create<DOFsHandler>(disMesh);
-	
-	dofHand->setNameTag("dofHand");
-	dofHand->setNumDOFs(1);
-	
-	dofHand->Update();
-\end{lstlisting}
-
-\subsubsection{Boundary conditions} \label{sec: BC}
-applying boundary condition, as it declared in Header \ref{lst:hlBC}.
-\begin{lstlisting}[firstnumber=59]
-	dofHand->setBoundaryCondition(0, 0.0); 
-	dofHand->setBoundaryCondition(0, MAxis::Xmax, 1.0);
-	dofHand->setBoundaryCondition(0, MAxis::Ymin, [](double x){return x;});
-	dofHand->setBoundaryCondition(0, MAxis::Ymax, [](double x){return x*x;});
-	
-	dofHand->UpdateGhosts();
-\end{lstlisting}
-
-\subsubsection{HiperProblem} \label{sec: hpc}
-\begin{lstlisting}[firstnumber=65]
-	SmartPtr<HiPerProblem> hiperProbl = Create<HiPerProblem>();
-	
-	hiperProbl->setParameterStructure(paramStr);
-	hiperProbl->setDOFsHandlers({dofHand});
-	hiperProbl->setIntegration("Integ", {"dofHand"});
-	hiperProbl->setCubatureGauss("Integ", 4);
-	hiperProbl->setElementFillings("Integ", ElementFilling);
-	
-	hiperProbl->Update();
-\end{lstlisting}
-
-\subsubsection{Solver Settings} \label{sec: slv}
-\begin{lstlisting}[firstnumber=74]
-	SmartPtr<AztecOOIterativeLinearSolver> solver=Create<AztecOOIterativeLinearSolver>();
-	
-	solver->setHiPerProblem(hiperProbl);
-	solver->setSolver(AztecOOIterativeLinearSolver::Solver::Gmres);
-	solver->setPrecond(AztecOOIterativeLinearSolver::Precond::DomainDecomp);
-	solver->setSubdomainSolve(AztecOOIterativeLinearSolver::SubdomainSolve::Ilut);
-	solver->setVerbosity(AztecOOIterativeLinearSolver::Verbosity::None);
-	
-	solver->setDefaultParameters();
-	solver->Update();
-	solver->solve();
-	
-	hiperProbl->UpdateSolution();
-\end{lstlisting}
-
-\subsubsection{Finalization and Postprocessing} \label{sec: fnl}
-\begin{lstlisting}[firstnumber=87]
-	dofHand->printFileLegacyVtk("Poisson");
-		
-	hiperlife::Finalize();
-	return 0;
-}
-\end{lstlisting}
-
-\subsubsection{Element Filling function} \label{sec: elff}
-\begin{lstlisting}[firstnumber=92]
-void ElementFilling(hiperlife::FillStructure& fillStr)
-{
-	using namespace std;
-	using namespace hiperlife;
-	using namespace hiperlife::Tensor;
-
-	const double force = fillStr.getRealParameter(PoissonParams::force);
-		
-	SubFillStructure& subFill = fillStr["dofHand"];
-
-	int eNN  = subFill.eNN;
-	int pDim = subFill.pDim;
-		
-	wrapper<double,1>  bf(subFill.nborBFs(), eNN);
-		
-	tensor<double,2> Dbf_g(eNN,pDim);
-	double jac;
-	GlobalBasisFunctions::gradients(Dbf_g, jac, subFill);
-		
-	wrapper<double,2> Ak(fillStr.Ak(0, 0).data(),eNN,eNN);
-	wrapper<double,1> Bk(fillStr.Bk(0).data(),eNN);
-		
-	for (int i = 0; i < eNN; i++)
-	{
-		for (int j = 0; j < eNN; j++)
-		{
-			double dotij{};
-			for (int d = 0; d < pDim; d++)
-			dotij += Dbf_g(i,d)*Dbf_g(j,d);
-				
-			Ak(i,j) += jac * dotij;
-		}
-			
-		Bk(i) += jac * bf(i) * force;
-	}
-		
-}
-\end{lstlisting}
-\section{Results} \label{sec: rst}
-\begin{figure}[htbp]
-	\centering
-	\includegraphics[width=0.6\textwidth]{Figures/result.png}
-	\caption{Solution.}
-	\label{fig_rst}
-\end{figure}
-\pagebreak
-\section*{Appendix} \label{sec: apx}
-In this section we present the declaration of the used functions in headers or even their code for the purpose of clarification.
-
-For creating a rectangle and Translation in y-direction:
-\begin{lstlisting} [caption={geometry},captionpos=b,label={lst:hlgeo},language=C++]
-// Generate a rectangle with nEx*nEy elements for given side lengths sidex and sidey.
-void genRectangle(int nEx, int nEy, double sidex, double sidey);
-
-//Translate mesh in y direction by an increment (incrY)
-inline void translateY(double incrY){translate(0.0, incrY, 0.0);};
-\end{lstlisting}
-
-For boundary condition:
-\begin{lstlisting} [caption={B.C},captionpos=b,label={lst:hlBC},language=C++]
-// Set a constraint value at every axis for one dof
-void setBoundaryCondition(int dof, double value)
-
-// Set a constraint function at one axis for one dof in 2D
-void setBoundaryCondition(int dof, MAxis ax, std::function<double(double)> f)
-\end{lstlisting}
+so by the known relation for basis functions like Eq. (\ref{eq13}), one can calculate the jacobian and the gradient of basis function.
 \end{document}
